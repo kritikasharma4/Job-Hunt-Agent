@@ -1,0 +1,17 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+.env
+.claude/
+.pytest_cache/
+PROJECT_STRUCTURE.md
+SCAFFOLD_SUMMARY.md
+ARCHITECTURE.md
+examples_ollama_usage.md
+OLLAMA_IMPLEMENTATION.md
+IMPLEMENTATION_SUMMARY.md
+OLLAMA_QUICK_REFERENCE.md
+LIVE_TESTING.md
+LIVE_TEST_README.md
+PROJECT_MANIFEST.md
