@@ -1,427 +1,287 @@
-# AI Job Hunting Agent 🤖
+# AI Job Hunting Agent
 
-A scalable, modular Python agent for intelligent job matching using **Llama 3 8B Q4** (via Ollama).
+An intelligent job search and matching platform that fetches real job listings, scores them against your resume, and tracks applications — all through a modern web interface.
 
-**Status:** 🏗️ Scaffold Complete - Ready for Implementation
+## What It Does
 
-## Features
+1. **Upload your resume** (PDF/JSON/TXT) — auto-parses into a structured profile
+2. **Search real jobs** from Google Jobs via JSearch API with filters (experience, type, recency, remote)
+3. **AI-powered matching** — scores each job against your skills, experience, and preferences
+4. **Track applications** — manage your pipeline from applied to offer
 
-- ✅ **Modular Architecture** - SOLID principles, pluggable components
-- ✅ **Local LLM Support** - Llama 3 8B Q4 via Ollama (no API costs)
-- ✅ **Multi-Source Job Fetching** - LinkedIn, Indeed, and extensible to more
-- ✅ **Intelligent Matching** - Skill, experience, and LLM-based relevance scoring
-- ✅ **Flexible Filtering** - Salary, location, experience, keywords, deduplication
-- ✅ **Profile Parsing** - Support for PDF, JSON, and text resumes
-- ✅ **Application Tracking** - Track status of submitted applications
-- ✅ **Type-Safe** - Full type hints throughout codebase
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| **Frontend** | React 19, Tailwind CSS 4, Vite, React Router 7 |
+| **Backend** | FastAPI, SQLAlchemy, SQLite |
+| **Job Data** | JSearch API (RapidAPI) — real listings from Google Jobs |
+| **Matching** | Skill-based + Experience-based hybrid scoring |
+| **Resume Parsing** | PDF (pdfplumber), JSON, TXT with optional LLM enhancement |
 
 ## Quick Start
 
 ### Prerequisites
+
 - Python 3.10+
-- [Ollama](https://ollama.ai) with Llama 3 8B Q4 model pulled
-- Git
+- Node.js 18+
+- [RapidAPI key](https://rapidapi.com/letscrape-6bRBa3QguO5/api/jsearch) (free tier: 500 requests/month)
 
 ### Installation
 
 ```bash
-# Clone repository
-cd /Users/kritikasharma/Desktop/job-hunt-agent
+# Clone the repo
+git clone https://github.com/kritikasharma4/Job-Hunt-Agent.git
+cd Job-Hunt-Agent
 
-# Create virtual environment
+# Python dependencies
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
+source venv/bin/activate
 pip install -r requirements.txt
 
-# Pull Llama 3 model with Ollama
-ollama pull llama3
+# Frontend dependencies
+cd frontend
+npm install
+cd ..
 ```
 
 ### Configuration
 
 ```bash
-# Copy environment template
 cp .env.example .env
-
-# Edit .env with your preferences
-# LLM_PROVIDER=ollama
-# LLM_MODEL=llama3
-# DEBUG=false
 ```
 
-### Usage
+Edit `.env`:
+
+```
+RAPIDAPI_KEY=your_rapidapi_key_here
+LLM_PROVIDER=ollama       # optional, for enhanced matching
+LLM_MODEL=llama3           # optional
+```
+
+### Run
 
 ```bash
-# Basic job search
+# Terminal 1: Backend (auto-reloads)
+python run_api.py
+
+# Terminal 2: Frontend
+cd frontend && npm run dev
+```
+
+Open **http://localhost:5173** in your browser.
+
+### CLI Mode (no UI needed)
+
+```bash
 python main.py \
   --profile resume.pdf \
   --query "Python Developer" \
   --location "San Francisco" \
   --output results.json
-
-# Advanced with multiple sources
-python main.py \
-  --profile resume.json \
-  --query "Machine Learning Engineer" \
-  --sources linkedin indeed \
-  --min-score 0.7 \
-  --debug
 ```
+
+## Features
+
+### Job Search with Filters
+
+- **Experience Level** — Entry, Mid, Senior, Lead
+- **Employment Type** — Full-time, Part-time, Contract, Internship
+- **Date Posted** — Today, Last 3 Days, Last Week, Last Month
+- **Remote Only** toggle
+- **Min Score** slider to filter low-relevance results
+
+### Profile Management
+
+- Upload resume (PDF/JSON/TXT) to auto-fill profile
+- Edit all fields: skills, work experience, education, certifications
+- Set preferences: salary range, job levels, remote preference, locations
+
+### Matching & Scoring
+
+Each job is scored across multiple dimensions:
+
+| Score | What It Measures |
+|-------|-----------------|
+| **Skills** | Overlap between your skills and job requirements |
+| **Experience** | Years of experience vs job expectations |
+| **Location** | Match with your preferred locations |
+| **Salary** | Alignment with your salary range |
+| **Level** | Job seniority vs your preferred levels |
+
+### Application Tracking
+
+- One-click apply from matched jobs
+- Status tracking: Pending, Applied, Interview, Offer, Rejected
+- Notes and history per application
+
+### Dashboard
+
+- Total searches, jobs found, matches, applications
+- Applications breakdown by status
+- Average match score
+- Recent top matches
 
 ## Project Structure
 
 ```
 job-hunt-agent/
-├── config/              # Configuration management
-├── models/              # Data models and schemas
-├── llm/                 # LLM provider abstraction
-│   ├── base.py         # LLMProvider interface
-│   ├── ollama_provider.py    # Llama 3 via Ollama
-│   └── openai_provider.py    # Alternative provider
-├── profile/            # Resume/profile parsing
-│   └── parser.py       # PDF, JSON, text parsers
-├── jobs/fetchers/      # Job source integrations
-│   └── base.py         # Fetcher interface & implementations
-├── relevance/          # Matching & scoring algorithms
-│   └── matcher.py      # Skill, experience, LLM matchers
-├── filters/            # Job filtering pipelines
-│   └── job_filters.py  # Salary, location, keyword filters
-├── core/               # Main agent orchestration
-│   ├── agent.py        # JobHuntingAgent orchestrator
-│   └── executor.py     # Application tracking
-├── tests/              # Test suite
-├── main.py             # Entry point
-└── requirements.txt    # Dependencies
+├── api/                         # FastAPI backend
+│   ├── app.py                   # App factory (CORS, routers, startup)
+│   ├── dependencies.py          # Dependency injection
+│   ├── schemas.py               # Pydantic request/response models
+│   └── routers/
+│       ├── profiles.py          # Profile CRUD + resume upload
+│       ├── jobs.py              # Job search (triggers pipeline)
+│       ├── matches.py           # Match results listing
+│       └── applications.py      # Application tracking
+├── core/                        # Agent orchestration
+│   ├── agent.py                 # JobHuntingAgent + AgentBuilder
+│   └── executor.py              # Application tracking
+├── config/settings.py           # Centralized configuration
+├── db/                          # Database layer
+│   ├── engine.py                # SQLAlchemy engine + sessions
+│   ├── models.py                # ORM table models
+│   └── repository.py            # CRUD operations
+├── models/schemas.py            # Domain dataclasses
+├── jobs/fetchers/               # Job source integrations
+│   ├── base.py                  # Fetcher interface
+│   ├── jsearch.py               # JSearch API (real jobs)
+│   └── demo.py                  # Demo data generator
+├── relevance/matcher.py         # Matching algorithms
+├── filters/job_filters.py       # Job filtering pipeline
+├── profile/parser.py            # Resume parsers (PDF, JSON, TXT)
+├── llm/                         # Optional LLM integration
+│   ├── base.py                  # LLM provider interface
+│   └── ollama_provider.py       # Ollama (Llama 3) provider
+├── frontend/                    # React SPA
+│   ├── src/
+│   │   ├── pages/               # Dashboard, Profile, Search, Applications
+│   │   ├── components/          # Reusable UI components
+│   │   └── api/client.js        # Axios API wrapper
+│   ├── package.json
+│   └── vite.config.js
+├── tests/                       # Test suite
+├── main.py                      # CLI entry point
+├── run_api.py                   # FastAPI entry point
+└── requirements.txt
 ```
 
-## Architecture Highlights
+## API Endpoints
 
-### SOLID Design Principles
+### Profiles
 
-- **Single Responsibility**: Each module has one reason to change
-- **Open/Closed**: Extensible without modifying existing code
-- **Liskov Substitution**: All implementations are properly substitutable
-- **Interface Segregation**: Clients depend only on needed methods
-- **Dependency Inversion**: Depend on abstractions, not concrete classes
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/profiles` | Create profile from JSON |
+| POST | `/api/profiles/upload` | Upload resume file and auto-parse |
+| GET | `/api/profiles/current` | Get current profile |
+| GET | `/api/profiles/{user_id}` | Get profile by ID |
+| PUT | `/api/profiles/{user_id}` | Update profile |
+
+### Jobs
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/jobs/search` | Search jobs with full pipeline |
+| GET | `/api/jobs` | List saved jobs |
+| GET | `/api/jobs/{job_id}` | Get job details |
+
+### Matches
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/matches` | List all matches |
+| GET | `/api/matches/{id}` | Match details |
+| DELETE | `/api/matches/{id}` | Dismiss match |
+
+### Applications
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/applications` | Create application |
+| GET | `/api/applications` | List applications |
+| PATCH | `/api/applications/{id}` | Update status |
+| DELETE | `/api/applications/{id}` | Delete application |
+
+### Dashboard
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/dashboard` | Aggregate stats |
+
+Swagger docs available at **http://localhost:8000/docs** when the server is running.
+
+## Architecture
 
 ### Design Patterns
 
-- **Strategy Pattern**: Swappable LLM providers, matchers, filters
-- **Factory Pattern**: Create providers and components from config
-- **Registry Pattern**: Manage multiple job sources
-- **Composite Pattern**: Combine filters with AND/OR logic
-- **Builder Pattern**: Construct agents with fluent API
-- **Facade Pattern**: JobHuntingAgent simplifies complex workflows
+- **Strategy** — Swappable matchers, fetchers, filters, LLM providers
+- **Builder** — `AgentBuilder` for fluent agent construction
+- **Factory** — `ProfileParserFactory` for format detection
+- **Pipeline** — `JobFilterPipeline` chains filters sequentially
+- **Facade** — `JobHuntingAgent` orchestrates the full workflow
+- **Repository** — Database CRUD abstracted from business logic
 
-### Key Components
-
-#### `config/settings.py`
-Centralized configuration using dataclasses. Load from environment variables:
-
-```python
-from config.settings import AppSettings
-
-settings = AppSettings.from_env()
-settings.llm.provider = "ollama"
-settings.relevance.min_relevance_score = 0.7
-```
-
-#### `models/schemas.py`
-Domain objects with clear responsibilities:
-- `Job` - Job posting data
-- `UserProfile` - Candidate profile
-- `RelevanceScore` - Matching results
-- `JobMatch` - Combined job + relevance
-- `ApplicationRecord` - Application tracking
-
-#### `llm/base.py` & `llm/ollama_provider.py`
-Pluggable LLM interface:
-
-```python
-from llm.base import LLMProviderFactory
-from config.settings import LLMConfig
-
-config = LLMConfig(provider="ollama", model="llama3")
-provider = LLMProviderFactory.create_provider(config)
-response = provider.generate("Analyze these skills...")
-```
-
-#### `profile/parser.py`
-Parse resumes in multiple formats:
-
-```python
-from profile.parser import ProfileParserFactory
-
-parser = ProfileParserFactory.get_parser("resume.pdf")
-profile = parser.parse("resume.pdf")
-```
-
-#### `jobs/fetchers/base.py`
-Fetch jobs from multiple sources:
-
-```python
-from jobs.fetchers.base import JobFetcherRegistry, LinkedInJobFetcher
-
-registry = JobFetcherRegistry()
-registry.register(LinkedInJobFetcher())
-jobs = registry.fetch_from_all("Python Developer", "San Francisco")
-```
-
-#### `relevance/matcher.py`
-Multiple matching strategies:
-
-```python
-from relevance.matcher import HybridMatcher, SkillBasedMatcher, LLMBasedMatcher
-
-matcher = HybridMatcher([
-    SkillBasedMatcher(),
-    LLMBasedMatcher(llm_provider)
-])
-scores = matcher.match(profile, job)
-```
-
-#### `filters/job_filters.py`
-Chainable job filtering:
-
-```python
-from filters.job_filters import JobFilterPipeline, SalaryFilter, LocationFilter
-
-pipeline = JobFilterPipeline([
-    SalaryFilter(min_salary=50000, max_salary=150000),
-    LocationFilter(allowed_locations=["San Francisco"]),
-])
-filtered_jobs, reasons = pipeline.apply(jobs, profile)
-```
-
-#### `core/agent.py`
-Main orchestrator:
-
-```python
-from core.agent import JobHuntingAgent
-
-# Construct with dependencies
-agent = JobHuntingAgent(
-    profile_parser=pdf_parser,
-    job_fetchers=[linkedin_fetcher],
-    relevance_scorer=hybrid_scorer,
-    filter_pipeline=filter_pipeline,
-    settings=settings
-)
-
-# Run complete pipeline
-matches = agent.run_pipeline(
-    profile_path="resume.pdf",
-    query="Python Developer",
-    location="San Francisco"
-)
-```
-
-## Workflow
+### Pipeline Flow
 
 ```
-1. Load Profile
-   resume.pdf → [ProfileParser] → UserProfile
-
-2. Fetch Jobs
-   "Python Developer" → [JobFetchers] → [Job, Job, ...]
-
-3. Match & Score
-   UserProfile + Jobs → [RelevanceMatcher] → [RelevanceScore, ...]
-
-4. Filter
-   [RelevanceScore, ...] → [FilterPipeline] → [JobMatch, ...]
-
-5. Rank & Output
-   [JobMatch, ...] → Results (JSON/CSV/Database)
+Resume Upload → ProfileParser → UserProfile (DB)
+                                     ↓
+Search Query → JSearch API → [Jobs] → RelevanceScorer → [Ranked Matches] → DB
+                                          ↑
+                                     UserProfile
 ```
 
-## Configuration Examples
+### Extending
 
-### Environment Variables
-```bash
-# Use Ollama with Llama 3
-export LLM_PROVIDER=ollama
-export LLM_MODEL=llama3
-export LLM_TEMPERATURE=0.7
+**Add a new job source:**
 
-# Relevance thresholds
-export MIN_RELEVANCE_SCORE=0.6
-export WEIGHT_SKILLS=0.3
-export WEIGHT_EXPERIENCE=0.3
-
-# Salary filter
-export MIN_SALARY=50000
-export MAX_SALARY=150000
-```
-
-### Settings in Code
-```python
-from config.settings import AppSettings, LLMConfig, FilterConfig
-
-settings = AppSettings()
-settings.llm = LLMConfig(provider="ollama", model="llama3")
-settings.filter = FilterConfig(
-    min_salary=50000,
-    max_salary=150000,
-    excluded_keywords=["relocation required"]
-)
-```
-
-## Extending the Agent
-
-### Add a New Job Source
 ```python
 from jobs.fetchers.base import JobFetcher
-from models.schemas import Job
 
-class MyJobSourceFetcher(JobFetcher):
+class MyFetcher(JobFetcher):
     def fetch(self, query, location=None, max_results=50, **filters):
-        # Implementation
-        return [Job(...), Job(...)]
+        return [Job(...)]
 
     def validate_connection(self):
         return True
 ```
 
-### Add a New Matching Strategy
+**Add a new matching strategy:**
+
 ```python
 from relevance.matcher import RelevanceMatcher
-from models.schemas import RelevanceScore
 
 class CustomMatcher(RelevanceMatcher):
     def match(self, profile, job):
-        # Implementation
         return RelevanceScore(overall_score=0.75, ...)
 
     def get_name(self):
         return "custom"
 ```
 
-### Add a New Filter
-```python
-from filters.job_filters import JobFilter
-from models.schemas import Job
+## Environment Variables
 
-class CustomFilter(JobFilter):
-    def apply(self, jobs, profile):
-        filtered = [j for j in jobs if ...]
-        reasons = ["reason1", "reason2"]
-        return filtered, reasons
-
-    def get_name(self):
-        return "custom"
-```
-
-## Dependencies
-
-Key dependencies:
-- **ollama** (0.1.45) - Local LLM integration
-- **pydantic** (2.5.3) - Data validation
-- **pdfplumber** (0.10.4) - PDF parsing
-- **scikit-learn** (1.3.2) - ML algorithms
-- **requests** (2.31.0) - HTTP requests
-- **pandas** (2.1.4) - Data processing
-
-See `requirements.txt` for complete list.
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `RAPIDAPI_KEY` | Yes | — | JSearch API key from RapidAPI |
+| `DATABASE_URL` | No | `sqlite:///job_hunt.db` | Database connection URL |
+| `LLM_PROVIDER` | No | `ollama` | LLM provider (ollama or none) |
+| `LLM_MODEL` | No | `llama3` | LLM model name |
+| `DEBUG` | No | `false` | Enable debug logging |
 
 ## Testing
 
-Run tests:
 ```bash
 pytest tests/ -v
-pytest tests/ --cov=.  # With coverage
+pytest tests/ --cov=.    # with coverage
 ```
-
-## Development
-
-Code quality:
-```bash
-black .              # Format code
-flake8 .             # Lint
-mypy .               # Type checking
-isort .              # Sort imports
-```
-
-## Roadmap
-
-### Phase 1: ✅ Scaffold (Complete)
-- Project structure
-- Base classes and interfaces
-- Configuration system
-- Data models
-
-### Phase 2: 🚧 Implementation (Next)
-- LLM provider implementations
-- Profile parsers
-- Job fetchers
-- Relevance matchers
-- Filter implementations
-
-### Phase 3: 🔮 Integration
-- End-to-end testing
-- Database persistence
-- Web UI (optional)
-- Cloud deployment
-
-### Phase 4: 🎯 Enhancement
-- Advanced NLP matching
-- Learning from feedback
-- Application automation
-- Analytics dashboard
-
-## Environment
-
-- Python 3.10+
-- macOS, Linux, Windows
-- 8GB RAM minimum (for Llama 3)
-- Internet connection for job fetching
-
-## Troubleshooting
-
-**Ollama not connecting?**
-```bash
-# Start Ollama
-ollama serve
-
-# In another terminal, pull model
-ollama pull llama3
-
-# Test connection
-curl http://localhost:11434/api/tags
-```
-
-**Profile parsing fails?**
-- Ensure PDF is not scanned image (need OCR)
-- Validate JSON format matches expected schema
-- Text files should have clear section headers
-
-**Low relevance scores?**
-- Adjust weights in config: `WEIGHT_SKILLS`, `WEIGHT_EXPERIENCE`
-- Lower threshold: `MIN_RELEVANCE_SCORE=0.5`
-- Use `HybridMatcher` combining multiple strategies
 
 ## License
 
-MIT License - See LICENSE file for details
-
-## Contributing
-
-Contributions welcome! Areas for help:
-- [ ] Implement job fetchers (LinkedIn, Indeed, etc.)
-- [ ] Add more profile parsers (DOCX, LinkedIn profile)
-- [ ] Implement matching algorithms
-- [ ] Write tests
-- [ ] Create web UI
-
-## Support
-
-- 📚 See `PROJECT_STRUCTURE.md` for detailed architecture
-- 💬 Check docstrings in source files
-- 🐛 Open issues for bugs
-- 📧 Questions? Check examples in main.py
+MIT License
 
 ---
 
-**Built with ❤️ for intelligent job hunting using local LLMs**
+Built for smarter job hunting.

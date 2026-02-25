@@ -14,6 +14,8 @@ from typing import List, Optional
 from models.schemas import UserProfile, Job, JobMatch, RelevanceScore
 from profile.parser import ProfileParserFactory, ProfileValidator
 from jobs.fetchers.base import JobFetcher, LinkedInJobFetcher, IndeedJobFetcher
+from jobs.fetchers.demo import DemoJobFetcher
+from jobs.fetchers.jsearch import JSearchFetcher
 from relevance.matcher import (
     RelevanceMatcher, RelevanceScorer, HybridMatcher,
     SkillBasedMatcher, ExperienceMatcher, LLMBasedMatcher,
@@ -104,7 +106,8 @@ class JobHuntingAgent:
         self,
         query: str,
         location: Optional[str] = None,
-        sources: Optional[List[str]] = None
+        sources: Optional[List[str]] = None,
+        **filters,
     ) -> List[Job]:
         """
         Fetch jobs from configured sources.
@@ -113,6 +116,8 @@ class JobHuntingAgent:
             query: Job search query
             location: Optional location filter
             sources: Optional list of sources to fetch from (default: all)
+            **filters: Additional filters passed to fetchers
+                       (employment_type, date_posted, remote_only, etc.)
 
         Returns:
             List of Job objects from all sources
@@ -143,6 +148,7 @@ class JobHuntingAgent:
                     query=query,
                     location=location,
                     max_results=max_per_source,
+                    **filters,
                 )
                 all_jobs.extend(jobs)
                 logger.info(f"  {source_name}: {len(jobs)} jobs")
@@ -362,6 +368,8 @@ class AgentBuilder:
         source_map = {
             "linkedin": LinkedInJobFetcher,
             "indeed": IndeedJobFetcher,
+            "demo": DemoJobFetcher,
+            "jsearch": JSearchFetcher,
         }
         for source in sources:
             cls = source_map.get(source.lower())

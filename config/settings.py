@@ -9,6 +9,12 @@ from dataclasses import dataclass
 from typing import Optional
 import os
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 
 @dataclass
 class LLMConfig:
@@ -33,7 +39,7 @@ class JobFetcherConfig:
 
     def __post_init__(self):
         if self.enabled_sources is None:
-            self.enabled_sources = ['linkedin']
+            self.enabled_sources = ['demo']
 
 
 @dataclass
@@ -65,6 +71,13 @@ class FilterConfig:
 
 
 @dataclass
+class DatabaseConfig:
+    """Configuration for database connection."""
+
+    url: str = "sqlite:///job_hunt.db"
+
+
+@dataclass
 class AppSettings:
     """Main application settings aggregating all configurations."""
 
@@ -72,6 +85,7 @@ class AppSettings:
     job_fetcher: JobFetcherConfig = None
     relevance: RelevanceConfig = None
     filter: FilterConfig = None
+    database: DatabaseConfig = None
     debug: bool = False
     log_level: str = "INFO"
 
@@ -84,6 +98,8 @@ class AppSettings:
             self.relevance = RelevanceConfig()
         if self.filter is None:
             self.filter = FilterConfig()
+        if self.database is None:
+            self.database = DatabaseConfig()
 
     @classmethod
     def from_env(cls) -> "AppSettings":
@@ -96,8 +112,13 @@ class AppSettings:
             max_tokens=int(os.getenv("LLM_MAX_TOKENS", "2048")),
         )
 
+        database_config = DatabaseConfig(
+            url=os.getenv("DATABASE_URL", "sqlite:///job_hunt.db"),
+        )
+
         return cls(
             llm=llm_config,
+            database=database_config,
             debug=os.getenv("DEBUG", "False").lower() == "true",
             log_level=os.getenv("LOG_LEVEL", "INFO"),
         )

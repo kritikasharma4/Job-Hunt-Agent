@@ -5,6 +5,9 @@ __pycache__/
 .env
 .claude/
 .pytest_cache/
+*.db
+frontend/node_modules/
+frontend/dist/
 PROJECT_STRUCTURE.md
 SCAFFOLD_SUMMARY.md
 ARCHITECTURE.md

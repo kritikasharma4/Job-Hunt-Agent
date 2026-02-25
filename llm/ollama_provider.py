@@ -387,6 +387,13 @@ class OllamaProvider(LLMProvider):
             except json.JSONDecodeError:
                 pass
 
+        # Try to repair truncated JSON (LLM response cut off by max_tokens)
+        if start_idx != -1:
+            json_str = response_text[start_idx:]
+            repaired = OllamaProvider._repair_truncated_json(json_str)
+            if repaired is not None:
+                return repaired
+
         # Try to find JSON array (text between [ and ])
         start_idx = response_text.find("[")
         end_idx = response_text.rfind("]")
@@ -407,3 +414,103 @@ class OllamaProvider(LLMProvider):
             f"Could not extract valid JSON from response. "
             f"First 200 chars: {response_text[:200]}"
         )
+
+    @staticmethod
+    def _repair_truncated_json(json_str: str) -> Optional[Dict[str, Any]]:
+        """
+        Attempt to repair truncated JSON from LLM responses.
+
+        When max_tokens cuts off the response mid-JSON, this tries to close
+        open strings, arrays, and objects to salvage the parsed fields.
+        """
+        text = json_str.rstrip()
+
+        # Strategy 1: Track state and close properly
+        open_braces = 0
+        open_brackets = 0
+        in_string = False
+        escape_next = False
+
+        for ch in text:
+            if escape_next:
+                escape_next = False
+                continue
+            if ch == '\\' and in_string:
+                escape_next = True
+                continue
+            if ch == '"' and not escape_next:
+                in_string = not in_string
+                continue
+            if in_string:
+                continue
+            if ch == '{':
+                open_braces += 1
+            elif ch == '}':
+                open_braces -= 1
+            elif ch == '[':
+                open_brackets += 1
+            elif ch == ']':
+                open_brackets -= 1
+
+        suffix = ''
+        if in_string:
+            suffix += '"'
+        suffix += ']' * max(0, open_brackets)
+        suffix += '}' * max(0, open_braces)
+
+        try:
+            return json.loads(text + suffix)
+        except json.JSONDecodeError:
+            pass
+
+        # Strategy 2: Truncate back to the last complete key-value pair
+        # Find the last comma outside a string — everything after it is incomplete
+        last_good = -1
+        in_str = False
+        esc = False
+        for i, ch in enumerate(text):
+            if esc:
+                esc = False
+                continue
+            if ch == '\\' and in_str:
+                esc = True
+                continue
+            if ch == '"' and not esc:
+                in_str = not in_str
+                continue
+            if in_str:
+                continue
+            if ch == ',':
+                last_good = i
+
+        if last_good > 0:
+            truncated = text[:last_good]
+            # Close any open brackets/braces
+            ob = 0
+            obk = 0
+            ins = False
+            esc2 = False
+            for ch in truncated:
+                if esc2:
+                    esc2 = False
+                    continue
+                if ch == '\\' and ins:
+                    esc2 = True
+                    continue
+                if ch == '"' and not esc2:
+                    ins = not ins
+                    continue
+                if ins:
+                    continue
+                if ch == '{': ob += 1
+                elif ch == '}': ob -= 1
+                elif ch == '[': obk += 1
+                elif ch == ']': obk -= 1
+
+            close = ']' * max(0, obk) + '}' * max(0, ob)
+            try:
+                return json.loads(truncated + close)
+            except json.JSONDecodeError:
+                pass
+
+        return None
